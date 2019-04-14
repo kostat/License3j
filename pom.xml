@@ -27,7 +27,7 @@
     </developers>
     <scm>
         <connection>scm:git:git@github.com:kostat/License3j.git</connection>
-        <developerConnection>scm:git:ssh://github.com/kostat/License3j.git</developerConnection>
+        <developerConnection>scm:git:git@github.com:kostat/License3j.git</developerConnection>
         <url>scm:git:git@github.com:kostat/License3j.git</url>
         <tag>HEAD</tag>
     </scm>
