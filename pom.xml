@@ -26,9 +26,10 @@
         </developer>
     </developers>
     <scm>
-        <connection>scm:git:git@github.com:verhas/License3j.git</connection>
-        <developerConnection>scm:git:ssh://github.com/verhas/License3j.git</developerConnection>
-        <url>https://github.com/verhas/License3j/tree/master</url>
+        <connection>scm:git:git@github.com:kostat/License3j.git</connection>
+        <developerConnection>scm:git:ssh://github.com/kostat/License3j.git</developerConnection>
+        <url>https://github.com/kostat/License3j.git</url>
+        <tag>HEAD</tag>
     </scm>
     <dependencies>
         <dependency>
