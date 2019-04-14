@@ -1,15 +1,15 @@
 package javax0.license3j;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.UUID;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 public class TestRevocableLicense {
     private static final String licenceUrlTemplate = "https://github.com/verhas/License3j/blob/master/src/test/resources/${licenseId}";
@@ -23,8 +23,10 @@ public class TestRevocableLicense {
      * @param status    to be returned when {@code exception} is {@code null}
      * @param exception the exception to be thrown or {@code null} if there should be no exception calling the handler
      */
-    private void mockHttpFetch(final RevocableLicense lic, final int status, final IOException exception) {
-        var handler = new MockHttpHandler();
+    private void mockHttpFetch(final RevocableLicense lic,
+                               final int status,
+                               final IOException exception) {
+        MockHttpHandler handler = new MockHttpHandler();
         if (exception == null) {
             handler.setResponseCode(status);
         } else {
@@ -36,8 +38,8 @@ public class TestRevocableLicense {
     @Test
     @DisplayName("license is not revoked when the http request returns true")
     public void licenseIsNotRevokedWhenHttpReturns200OK() throws IOException {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         mockHttpFetch(lic, 200, null);
         lic.setRevocationURL(new URL(reachableUrlString));
         Assertions.assertFalse(lic.isRevoked(true));
@@ -46,8 +48,8 @@ public class TestRevocableLicense {
     @Test
     @DisplayName("license is not revoked when the URL is not reachable")
     public void licenseIsNotRevokedWhenUnreachableGraceful() throws IOException {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         mockHttpFetch(lic, 0, new IOException());
         lic.setRevocationURL(new URL(unreachableUrlString));
         Assertions.assertFalse(lic.isRevoked(false));
@@ -56,8 +58,8 @@ public class TestRevocableLicense {
     @Test
     @DisplayName("License is revoked default when the URL is not reachable")
     public void licenseIsNotRevokedWhenUnreachableStrict() throws IOException {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         mockHttpFetch(lic, 0, new IOException());
         lic.setRevocationURL(new URL(unreachableUrlString));
         Assertions.assertTrue(lic.isRevoked(true));
@@ -66,8 +68,8 @@ public class TestRevocableLicense {
     @Test
     @DisplayName("License is not revoked when the URL is general and there is no placeholder in the revocation url and response is 200")
     public void licenseIsNotRevokedWhenNoIdIsInUrlTemplateAndTheUrlIsOK() {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         mockHttpFetch(lic, 200, null);
         lic.setRevocationURL(reachableUrlString);
         license.setLicenseId(new UUID(0, 1L));
@@ -76,8 +78,8 @@ public class TestRevocableLicense {
 
     @Test
     public void licenseIsNotRevokedWhenIdFileIsThere() {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         mockHttpFetch(lic, 0, new IOException());
         lic.setRevocationURL(licenceUrlTemplate);
         license.setLicenseId(new UUID(0, 1L));
@@ -86,8 +88,8 @@ public class TestRevocableLicense {
 
     @Test
     public void licenseIsRevokedWhenIdFileIsNotThere() {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         mockHttpFetch(lic, 404, null);
         lic.setRevocationURL(licenceUrlTemplate);
         license.setLicenseId(new UUID(0, 2L));
@@ -96,25 +98,24 @@ public class TestRevocableLicense {
 
     @Test
     public void licenseIsRevokedWhenUrlIsMalformed() {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         mockHttpFetch(lic, 0, new IOException());
         lic.setRevocationURL("ftp://index.hu/");
         Assertions.assertTrue(lic.isRevoked(true));
     }
 
     @Test
-    public void notSettingRevocationUrlResultNullRevocationUrl()
-        throws MalformedURLException {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+    public void notSettingRevocationUrlResultNullRevocationUrl() throws MalformedURLException {
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         Assertions.assertNull(lic.getRevocationURL());
     }
 
     @Test
     public void licenseWithNoRevocationUrlIsNotRevoked() {
-        final var license = new License();
-        final var lic = new RevocableLicense(license);
+        final License license = new License();
+        final RevocableLicense lic = new RevocableLicense(license);
         Assertions.assertFalse(lic.isRevoked(true));
     }
 
@@ -130,14 +131,15 @@ public class TestRevocableLicense {
             this.responseCode = responseCode;
         }
 
-        int responseCode(final HttpURLConnection connection)
-            throws IOException {
+        @Override
+        int responseCode(final HttpURLConnection connection) throws IOException {
             if (exception != null) {
                 throw exception;
             }
             return responseCode;
         }
 
+        @Override
         URLConnection open(URL url) {
             return new HttpURLConnection(url) {
 

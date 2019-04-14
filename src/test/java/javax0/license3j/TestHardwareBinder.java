@@ -1,33 +1,31 @@
 package javax0.license3j;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 public class TestHardwareBinder {
 
-    private static final boolean[] falseTrue = new boolean[]{false, true};
+    private static final boolean[] falseTrue = new boolean[] { false, true };
 
     @Test
     @DisplayName("calling hardwarebinder main() does not throw up")
-    public void testMain() throws
-        SocketException, UnknownHostException, NoSuchAlgorithmException {
+    public void testMain() throws SocketException, UnknownHostException, NoSuchAlgorithmException {
         HardwareBinder.main(null);
     }
 
     @Test
     @DisplayName("hardware binder should accept the machine UUID it just calculated on the test machine")
-    public void machineHasUuid() throws
-        SocketException, UnknownHostException, NoSuchAlgorithmException {
+    public void machineHasUuid() throws SocketException, UnknownHostException, NoSuchAlgorithmException {
         for (final boolean ignoreNetwork : falseTrue) {
             for (final boolean ignoreArchitecture : falseTrue) {
                 for (final boolean ignoreHostName : falseTrue) {
-                    final var hb = new HardwareBinder();
+                    final HardwareBinder hb = new HardwareBinder();
                     if (ignoreNetwork)
                         hb.ignore.network();
                     if (ignoreArchitecture)
@@ -43,8 +41,7 @@ public class TestHardwareBinder {
 
     @Test
     @DisplayName("hardware binder should accept the machine UUID string format it just calculated on the test machine")
-    public void machineHasUuidString() throws NoSuchAlgorithmException,
-        SocketException, UnknownHostException {
+    public void machineHasUuidString() throws NoSuchAlgorithmException, SocketException, UnknownHostException {
         for (final boolean ignoreNetwork : falseTrue) {
             for (final boolean ignoreArchitecture : falseTrue) {
                 for (final boolean ignoreHostName : falseTrue) {
@@ -64,9 +61,7 @@ public class TestHardwareBinder {
 
     @Test
     @DisplayName("if the UUID string is too long UUID assertion returns false")
-    public void tooLongUuidStringAssertsFalse()
-        throws NoSuchAlgorithmException, SocketException,
-        UnknownHostException {
+    public void tooLongUuidStringAssertsFalse() throws NoSuchAlgorithmException, SocketException, UnknownHostException {
         for (final boolean ignoreNetwork : falseTrue) {
             for (final boolean ignoreArchitecture : falseTrue) {
                 for (final boolean ignoreHostName : falseTrue) {
@@ -98,9 +93,7 @@ public class TestHardwareBinder {
 
     @Test
     @DisplayName("if the UUID string is properly formatted but contains a wrong value then UUID assertion returns false")
-    public void wrongUuidStringAssertsFalse()
-        throws NoSuchAlgorithmException, SocketException,
-        UnknownHostException {
+    public void wrongUuidStringAssertsFalse() throws NoSuchAlgorithmException, SocketException, UnknownHostException {
         for (final boolean ignoreNetwork : falseTrue) {
             for (final boolean ignoreArchitecture : falseTrue) {
                 for (final boolean ignoreHostName : falseTrue) {

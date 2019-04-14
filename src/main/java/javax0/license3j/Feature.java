@@ -1,18 +1,20 @@
 package javax0.license3j;
 
-import javax0.license3j.parsers.NumericParser;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import javax0.license3j.parsers.NumericParser;
 
 /**
  * A feature is a single "feature" in a license. It has a
@@ -24,27 +26,21 @@ import java.util.function.Function;
  * </ul>
  * The type can be one of the types that are defined in the enumeration {@link Type}.
  * <p>
- * There is a utility class inside this class called {@link Create} that contains public static methods to
- * create features for each type. Invoking one of those methods is the way to create a new feature instance.
+ * There is a utility class inside this class called {@link Create} that contains public static methods to create
+ * features for each type. Invoking one of those methods is the way to create a new feature instance.
  * <p>
- * A feature can be tested against the type calling one of the {@code boolean} methods {@code isXXX()},
- * where  {@code XXX} is one
- * of the types. Getting the value from a type should be via the methods {@code getXXX}, where, again, {@code XXX} is
- * one of the types. Invoking {@code getXXX} for a feature that has a type that is not {@code XXX} will throw
- * {@link IllegalArgumentException}.
+ * A feature can be tested against the type calling one of the {@code boolean} methods {@code isXXX()}, where
+ * {@code XXX} is one of the types. Getting the value from a type should be via the methods {@code getXXX}, where,
+ * again, {@code XXX} is one of the types. Invoking {@code getXXX} for a feature that has a type that is not {@code XXX}
+ * will throw {@link IllegalArgumentException}.
  * <p>
- * Features can be serialized to a byte array invoking the method {@link #serialized()}. The same byte array can be
- * used as an argument to the utility method {@link Create#from(byte[])} to create a {@code Feature} of the same name
- * and the same value.
+ * Features can be serialized to a byte array invoking the method {@link #serialized()}. The same byte array can be used
+ * as an argument to the utility method {@link Create#from(byte[])} to create a {@code Feature} of the same name and the
+ * same value.
  */
 public class Feature {
-    private static final String[] DATE_FORMAT =
-            {"yyyy-MM-dd HH:mm:ss.SSS",
-                    "yyyy-MM-dd HH:mm:ss",
-                    "yyyy-MM-dd HH:mm",
-                    "yyyy-MM-dd HH",
-                    "yyyy-MM-dd"
-            };
+    private static final String[] DATE_FORMAT = { "yyyy-MM-dd HH:mm:ss.SSS", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm",
+            "yyyy-MM-dd HH", "yyyy-MM-dd" };
     private static final int VARIABLE_LENGTH = -1;
     private final String name;
     private final Type type;
@@ -57,13 +53,17 @@ public class Feature {
     }
 
     private static String dateFormat(Object date) {
-        return new SimpleDateFormat(DATE_FORMAT[0]).format(date);
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT[0]);
+        dateFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
+        return dateFormat.format(date);
     }
 
     private static Date dateParse(String date) {
-        for (var format : DATE_FORMAT) {
+        for (String format : DATE_FORMAT) {
             try {
-                return new SimpleDateFormat(format).parse(date);
+                SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+                dateFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
+                return dateFormat.parse(date);
             } catch (ParseException ignored) {
             }
         }
@@ -71,7 +71,7 @@ public class Feature {
     }
 
     static String[] splitString(String s) {
-        var nameEnd = s.indexOf(":");
+        int nameEnd = s.indexOf(":");
         final int typeEnd = s.indexOf("=", nameEnd + 1);
         if (nameEnd > typeEnd) {
             nameEnd = -1;
@@ -88,13 +88,15 @@ public class Feature {
             name = s.substring(0, typeEnd).trim();
             typeString = "STRING";
         }
-        final var valueString = s.substring(typeEnd + 1);
-        return new String[]{name, typeString, valueString};
+        final String valueString = s.substring(typeEnd + 1);
+        return new String[] { name, typeString, valueString };
     }
 
-    static Feature getFeature(String name, String typeString, String valueString) {
-        final var type = Type.valueOf(typeString);
-        final var value = type.unstringer.apply(valueString);
+    static Feature getFeature(String name,
+                              String typeString,
+                              String valueString) {
+        final Type type = Type.valueOf(typeString);
+        final Object value = type.unstringer.apply(valueString);
         return type.factory.apply(name, value);
     }
 
@@ -122,28 +124,28 @@ public class Feature {
     }
 
     /**
-     *  Convert a feature to byte array. The bytes will have the following structure
+     * Convert a feature to byte array. The bytes will have the following structure
      *
-     *  <pre>
+     * <pre>
      *      [4-byte type][4-byte name length][4-byte value length][name][value]
-     *  </pre>
+     * </pre>
      *
-     *  or
+     * or
      *
-     *  <pre>
+     * <pre>
      *      [4-byte type][4-byte name length][name][value]
-     *  </pre>
+     * </pre>
      *
-     *  if the length of the value can be determined from the type (some types have fixed length values).
+     * if the length of the value can be determined from the type (some types have fixed length values).
      *
      * @return the byte array representation of the feature
      */
     public byte[] serialized() {
-        final var nameBuffer = name.getBytes(StandardCharsets.UTF_8);
-        final var typeLength = Integer.BYTES;
-        final var nameLength = Integer.BYTES + nameBuffer.length;
-        final var valueLength = Integer.BYTES + value.length;
-        final var buffer = ByteBuffer.allocate(typeLength + nameLength + valueLength)
+        final byte[] nameBuffer = name.getBytes(StandardCharsets.UTF_8);
+        final int typeLength = Integer.BYTES;
+        final int nameLength = Integer.BYTES + nameBuffer.length;
+        final int valueLength = Integer.BYTES + value.length;
+        final ByteBuffer buffer = ByteBuffer.allocate(typeLength + nameLength + valueLength)
                 .putInt(type.serialized)
                 .putInt(nameBuffer.length);
         if (type.fixedSize == VARIABLE_LENGTH) {
@@ -268,8 +270,8 @@ public class Feature {
         if (type != Type.BIGDECIMAL) {
             throw new IllegalArgumentException("Feature is not BIGDECIMAL");
         }
-        var bb = ByteBuffer.wrap(value);
-        var scale = bb.getInt(value.length - Integer.BYTES);
+        ByteBuffer bb = ByteBuffer.wrap(value);
+        int scale = bb.getInt(value.length - Integer.BYTES);
 
         return new BigDecimal(new BigInteger(Arrays.copyOf(value, value.length - Integer.BYTES)), scale);
     }
@@ -278,9 +280,9 @@ public class Feature {
         if (type != Type.UUID) {
             throw new IllegalArgumentException("Feature is not UUID");
         }
-        var bb = ByteBuffer.wrap(value);
-        final var ls = bb.getLong();
-        final var ms = bb.getLong();
+        ByteBuffer bb = ByteBuffer.wrap(value);
+        final long ls = bb.getLong();
+        final long ms = bb.getLong();
         return new java.util.UUID(ms, ls);
     }
 
@@ -292,56 +294,46 @@ public class Feature {
     }
 
     private enum Type {
-        BINARY(1, VARIABLE_LENGTH,
-                Feature::getBinary,
-                (name, value) -> Create.binaryFeature(name, (byte[]) value),
+        BINARY(1, VARIABLE_LENGTH, Feature::getBinary, (name,
+                                                        value) -> Create.binaryFeature(name, (byte[]) value),
                 ba -> Base64.getEncoder().encodeToString((byte[]) ba), enc -> Base64.getDecoder().decode(enc)),
-        STRING(2, VARIABLE_LENGTH,
-                Feature::getString,
-                (name, value) -> Create.stringFeature(name, (String) value),
+        STRING(2, VARIABLE_LENGTH, Feature::getString, (name,
+                                                        value) -> Create.stringFeature(name, (String) value),
                 Object::toString, s -> s),
-        BYTE(3, Byte.BYTES,
-                Feature::getByte,
-                (name, value) -> Create.byteFeature(name, (Byte) value),
+        BYTE(3, Byte.BYTES, Feature::getByte, (name,
+                                               value) -> Create.byteFeature(name, (Byte) value),
                 b -> String.format("0x%02X", (byte) (Byte) b), NumericParser.Byte::parse),
-        SHORT(4, Short.BYTES,
-                Feature::getShort,
-                (name, value) -> Create.shortFeature(name, (Short) value),
+        SHORT(4, Short.BYTES, Feature::getShort, (name,
+                                                  value) -> Create.shortFeature(name, (Short) value),
                 Object::toString, NumericParser.Short::parse),
-        INT(5, Integer.BYTES,
-                Feature::getInt,
-                (name, value) -> Create.intFeature(name, (Integer) value),
+        INT(5, Integer.BYTES, Feature::getInt, (name,
+                                                value) -> Create.intFeature(name, (Integer) value),
                 Object::toString, NumericParser.Int::parse),
-        LONG(6, Long.BYTES,
-                Feature::getLong,
-                (name, value) -> Create.longFeature(name, (Long) value),
+        LONG(6, Long.BYTES, Feature::getLong, (name,
+                                               value) -> Create.longFeature(name, (Long) value),
                 Object::toString, NumericParser.Long::parse),
-        FLOAT(7, Float.BYTES,
-                Feature::getFloat,
-                (name, value) -> Create.floatFeature(name, (Float) value),
+        FLOAT(7, Float.BYTES, Feature::getFloat, (name,
+                                                  value) -> Create.floatFeature(name, (Float) value),
                 Object::toString, Float::parseFloat),
-        DOUBLE(8, Double.BYTES,
-                Feature::getDouble,
-                (name, value) -> Create.doubleFeature(name, (Double) value),
+        DOUBLE(8, Double.BYTES, Feature::getDouble, (name,
+                                                     value) -> Create.doubleFeature(name, (Double) value),
                 Object::toString, Double::parseDouble),
 
-        BIGINTEGER(9, VARIABLE_LENGTH,
-                Feature::getBigInteger,
-                (name, value) -> Create.bigIntegerFeature(name, (BigInteger) value),
+        BIGINTEGER(9, VARIABLE_LENGTH, Feature::getBigInteger, (name,
+                                                                value) -> Create.bigIntegerFeature(name,
+                                                                        (BigInteger) value),
                 Object::toString, BigInteger::new),
-        BIGDECIMAL(10, VARIABLE_LENGTH,
-                Feature::getBigDecimal,
-                (name, value) -> Create.bigDecimalFeature(name, (BigDecimal) value),
+        BIGDECIMAL(10, VARIABLE_LENGTH, Feature::getBigDecimal, (name,
+                                                                 value) -> Create.bigDecimalFeature(name,
+                                                                         (BigDecimal) value),
                 Object::toString, BigDecimal::new),
 
-        DATE(11, Long.BYTES,
-                Feature::getDate,
-                (name, value) -> Create.dateFeature(name, (Date) value),
+        DATE(11, Long.BYTES, Feature::getDate, (name,
+                                                value) -> Create.dateFeature(name, (Date) value),
                 Feature::dateFormat, Feature::dateParse),
 
-        UUID(12, 2 * Long.BYTES,
-                Feature::getUUID,
-                (name, value) -> Create.uuidFeature(name, (java.util.UUID) value),
+        UUID(12, 2 * Long.BYTES, Feature::getUUID, (name,
+                                                    value) -> Create.uuidFeature(name, (java.util.UUID) value),
                 Object::toString, java.util.UUID::fromString);
 
         final int fixedSize;
@@ -351,12 +343,9 @@ public class Feature {
         final Function<String, Object> unstringer;
         final BiFunction<String, Object, Feature> factory;
 
-        Type(int serialized,
-             int fixedSize,
-             Function<Feature, Object> objecter,
-             BiFunction<String, Object, Feature> factory,
-             Function<Object, String> toStringer,
-             Function<String, Object> unstringer) {
+        Type(int serialized, int fixedSize, Function<Feature, Object> objecter,
+                BiFunction<String, Object, Feature> factory, Function<Object, String> toStringer,
+                Function<String, Object> unstringer) {
             this.serialized = serialized;
             this.fixedSize = fixedSize;
             this.stringer = toStringer;
@@ -370,85 +359,97 @@ public class Feature {
         private Create() {
         }
 
-
         private static void notNull(Object value) {
             if (value == null) {
                 throw new IllegalArgumentException("Cannot create a feature from null value.");
             }
         }
 
-        public static Feature binaryFeature(String name, byte[] value) {
+        public static Feature binaryFeature(String name,
+                                            byte[] value) {
             notNull(value);
             return new Feature(name, Type.BINARY, value);
         }
 
-        public static Feature stringFeature(String name, String value) {
+        public static Feature stringFeature(String name,
+                                            String value) {
             notNull(value);
             return new Feature(name, Type.STRING, value.getBytes(StandardCharsets.UTF_8));
         }
 
-        public static Feature byteFeature(String name, Byte value) {
+        public static Feature byteFeature(String name,
+                                          Byte value) {
             notNull(value);
-            return new Feature(name, Type.BYTE, new byte[]{value});
+            return new Feature(name, Type.BYTE, new byte[] { value });
         }
 
-        public static Feature shortFeature(String name, Short value) {
+        public static Feature shortFeature(String name,
+                                           Short value) {
             notNull(value);
             return new Feature(name, Type.SHORT, ByteBuffer.allocate(Short.BYTES).putShort(value).array());
         }
 
-        public static Feature intFeature(String name, Integer value) {
+        public static Feature intFeature(String name,
+                                         Integer value) {
             notNull(value);
             return new Feature(name, Type.INT, ByteBuffer.allocate(Integer.BYTES).putInt(value).array());
         }
 
-        public static Feature longFeature(String name, Long value) {
+        public static Feature longFeature(String name,
+                                          Long value) {
             notNull(value);
             return new Feature(name, Type.LONG, ByteBuffer.allocate(Long.BYTES).putLong(value).array());
         }
 
-        public static Feature floatFeature(String name, Float value) {
+        public static Feature floatFeature(String name,
+                                           Float value) {
             notNull(value);
             return new Feature(name, Type.FLOAT, ByteBuffer.allocate(Float.BYTES).putFloat(value).array());
         }
 
-        public static Feature doubleFeature(String name, Double value) {
+        public static Feature doubleFeature(String name,
+                                            Double value) {
             notNull(value);
             return new Feature(name, Type.DOUBLE, ByteBuffer.allocate(Double.BYTES).putDouble(value).array());
         }
 
-        public static Feature bigIntegerFeature(String name, BigInteger value) {
+        public static Feature bigIntegerFeature(String name,
+                                                BigInteger value) {
             notNull(value);
             return new Feature(name, Type.BIGINTEGER, value.toByteArray());
         }
 
-        public static Feature bigDecimalFeature(String name, BigDecimal value) {
+        public static Feature bigDecimalFeature(String name,
+                                                BigDecimal value) {
             notNull(value);
             byte[] b = value.unscaledValue().toByteArray();
-            return new Feature(name, Type.BIGDECIMAL, ByteBuffer.allocate(Integer.BYTES + b.length)
-                    .put(b)
-                    .putInt(value.scale())
-                    .array());
+            return new Feature(name, Type.BIGDECIMAL,
+                    ByteBuffer.allocate(Integer.BYTES + b.length).put(b).putInt(value.scale()).array());
         }
 
-        public static Feature uuidFeature(String name, java.util.UUID value) {
+        public static Feature uuidFeature(String name,
+                                          java.util.UUID value) {
             notNull(value);
-            return new Feature(name, Type.UUID, ByteBuffer.allocate(2 * Long.BYTES)
-                    .putLong(value.getLeastSignificantBits())
-                    .putLong(value.getMostSignificantBits())
-                    .array());
+            return new Feature(name, Type.UUID,
+                    ByteBuffer.allocate(2 * Long.BYTES)
+                            .putLong(value.getLeastSignificantBits())
+                            .putLong(value.getMostSignificantBits())
+                            .array());
         }
 
-        public static Feature dateFeature(String name, Date value) {
+        public static Feature dateFeature(String name,
+                                          Date value) {
             notNull(value);
             return new Feature(name, Type.DATE, ByteBuffer.allocate(Long.BYTES).putLong(value.getTime()).array());
         }
 
         /**
          * Create a feature from a string representation of the feature. The feature has to have the following format
+         * 
          * <pre>
          *     name:TYPE=value
          * </pre>
+         * 
          * the {@code :TYPE} part may be missing in case the feature type is {@code STRING}. The value has to be the
          * string representation of the value that is different for each type.
          *
@@ -456,50 +457,50 @@ public class Feature {
          * @return the new object created from the string
          */
         public static Feature from(String s) {
-            final var parts = Feature.splitString(s);
+            final String[] parts = Feature.splitString(s);
             return getFeature(parts[0], parts[1], parts[2]);
         }
 
         /**
-         * Create the feature from the binary serialized format. The format is defined in the documentation of
-         * the method {@link #serialized()}.
+         * Create the feature from the binary serialized format. The format is defined in the documentation of the
+         * method {@link #serialized()}.
          *
          * @param serialized the serialized format.
          * @return a new feature object
          */
         public static Feature from(byte[] serialized) {
             if (serialized.length < Integer.BYTES * 3) {
-                throw new IllegalArgumentException("Cannot load feature from a byte array that has "
-                        + serialized.length + " bytes which is < " + (3 * Integer.BYTES));
+                throw new IllegalArgumentException("Cannot load feature from a byte array that has " + serialized.length
+                        + " bytes which is < " + (3 * Integer.BYTES));
             }
-            var bb = ByteBuffer.wrap(serialized);
-            var typeSerialized = bb.getInt();
+            ByteBuffer bb = ByteBuffer.wrap(serialized);
+            int typeSerialized = bb.getInt();
             final Type type = typeFrom(typeSerialized);
-            final var nameLength = bb.getInt();
-            final var valueLength = type.fixedSize == VARIABLE_LENGTH ? bb.getInt() : type.fixedSize;
-            final var expectedLength = Integer.BYTES * 3 + valueLength + nameLength;
+            final int nameLength = bb.getInt();
+            final int valueLength = type.fixedSize == VARIABLE_LENGTH ? bb.getInt() : type.fixedSize;
+            final int expectedLength = Integer.BYTES * 3 + valueLength + nameLength;
             if (serialized.length != expectedLength) {
-                throw new IllegalArgumentException("Cannot load feature from a byte array that has "
-                        + serialized.length + " bytes which is != " + expectedLength);
+                throw new IllegalArgumentException("Cannot load feature from a byte array that has " + serialized.length
+                        + " bytes which is != " + expectedLength);
             }
-            final var nameBuffer = new byte[nameLength];
+            final byte[] nameBuffer = new byte[nameLength];
             bb.get(nameBuffer);
-            final var value = new byte[valueLength];
+            final byte[] value = new byte[valueLength];
             if (valueLength > 0) {
                 bb.get(value);
             }
-            final var name = new String(nameBuffer, StandardCharsets.UTF_8);
+            final String name = new String(nameBuffer, StandardCharsets.UTF_8);
             return new Feature(name, type, value);
         }
 
         private static Type typeFrom(int typeSerialized) {
-            for (final var type : Type.values()) {
+            for (final Type type : Type.values()) {
                 if (type.serialized == typeSerialized) {
                     return type;
                 }
             }
-            throw new IllegalArgumentException("The deserialized form has a type value " + typeSerialized + " which is not valid.");
+            throw new IllegalArgumentException(
+                    "The deserialized form has a type value " + typeSerialized + " which is not valid.");
         }
     }
 }
-

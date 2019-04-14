@@ -1,26 +1,41 @@
 package javax0.license3j;
 
-import javax0.license3j.crypto.LicenseKeyPair;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Modifier;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.security.*;
-import java.util.*;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
+import javax0.license3j.crypto.LicenseKeyPair;
 
 /**
- * A license describes the rights that a certain user has. The rights are represented by {@link Feature}s.
- * Each feature has a name, type and a value. The license is essentially the set of features.
+ * A license describes the rights that a certain user has. The rights are represented by {@link Feature}s. Each feature
+ * has a name, type and a value. The license is essentially the set of features.
  * <p>
- * As examples features can be license expiration date and time, number of users allowed to use the software,
- * name of rights and so on.
+ * As examples features can be license expiration date and time, number of users allowed to use the software, name of
+ * rights and so on.
  */
 public class License {
     private static final int MAGIC = 0x21CE_4E_5E; // LICE(N=4E)SE
@@ -48,22 +63,20 @@ public class License {
         return features.get(name);
     }
 
-
     /**
      * Checks the expiration date of the license and returns {@code true} if the license has expired.
      * <p>
-     * The expiration date is stored in the license feature {@code expiryDate}. A license is expired
-     * if the current date is after the specified {@code expiryDate}. At the given date (ms precision) the
-     * license is still valid.
+     * The expiration date is stored in the license feature {@code expiryDate}. A license is expired if the current date
+     * is after the specified {@code expiryDate}. At the given date (ms precision) the license is still valid.
      * <p>
-     * The method does not check that the license is properly signed or not. That has to be checked using a
-     * separate call to the underlying license.
+     * The method does not check that the license is properly signed or not. That has to be checked using a separate
+     * call to the underlying license.
      *
      * @return {@code true} if the license has expired.
      */
     public boolean isExpired() {
-        final var expiryDate = get(EXPIRATION_DATE).getDate();
-        final var today = new Date();
+        final Date expiryDate = get(EXPIRATION_DATE).getDate();
+        final Date today = new Date();
         return today.getTime() > expiryDate.getTime();
     }
 
@@ -75,14 +88,14 @@ public class License {
     public void setExpiry(final Date expiryDate) {
         add(Feature.Create.dateFeature(EXPIRATION_DATE, expiryDate));
     }
+
     /**
      * Sign the license.
      * <p>
      * The license is signed the following way:
      * <ol>
      * <li>Add the digest algorithm string to the license as a feature. The feature name is {@code signatureDigest}
-     * (name is defined in the constant {@link #DIGEST_KEY} in this class).
-     * </li>
+     * (name is defined in the constant {@link #DIGEST_KEY} in this class).</li>
      * <li>The license is converted to binary format</li>
      * <li>A digest is created from the binary license using the message digest algorithm named by the {@code digest}
      * parameter</li>
@@ -98,15 +111,17 @@ public class License {
      * @throws BadPaddingException       this exception comes from the underlying encryption library
      * @throws IllegalBlockSizeException this exception comes from the underlying encryption library
      */
-    public void sign(PrivateKey key, String digest) throws NoSuchAlgorithmException, NoSuchPaddingException,
-        InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+    public void sign(PrivateKey key,
+                     String digest)
+            throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, BadPaddingException,
+            IllegalBlockSizeException {
         add(Feature.Create.stringFeature(DIGEST_KEY, digest));
-        final var digester = MessageDigest.getInstance(digest);
-        final var ser = unsigned();
-        final var digestValue = digester.digest(ser);
-        final var cipher = Cipher.getInstance(key.getAlgorithm());
+        final MessageDigest digester = MessageDigest.getInstance(digest);
+        final byte[] ser = unsigned();
+        final byte[] digestValue = digester.digest(ser);
+        final Cipher cipher = Cipher.getInstance(key.getAlgorithm());
         cipher.init(Cipher.ENCRYPT_MODE, key);
-        final var signature = cipher.doFinal(digestValue);
+        final byte[] signature = cipher.doFinal(digestValue);
         add(signature);
     }
 
@@ -125,21 +140,21 @@ public class License {
     }
 
     /**
-     * Returns true if the license is signed and the authenticity of the signature can be checked successfully
-     * using the key.
+     * Returns true if the license is signed and the authenticity of the signature can be checked successfully using the
+     * key.
      *
      * @param key encryption key to check the authenticity of the license signature
      * @return {@code true} if the license was properly signed and is intact. In any other cases it returns
-     * {@code false}.
+     *         {@code false}.
      */
     public boolean isOK(PublicKey key) {
         try {
-            final var digester = MessageDigest.getInstance(get(DIGEST_KEY).getString());
-            final var ser = unsigned();
-            final var digestValue = digester.digest(ser);
-            final var cipher = Cipher.getInstance(key.getAlgorithm());
+            final MessageDigest digester = MessageDigest.getInstance(get(DIGEST_KEY).getString());
+            final byte[] ser = unsigned();
+            final byte[] digestValue = digester.digest(ser);
+            final Cipher cipher = Cipher.getInstance(key.getAlgorithm());
             cipher.init(Cipher.DECRYPT_MODE, key);
-            final var sigDigest = cipher.doFinal(getSignature());
+            final byte[] sigDigest = cipher.doFinal(getSignature());
             return Arrays.equals(digestValue, sigDigest);
         } catch (Exception e) {
             return false;
@@ -154,7 +169,7 @@ public class License {
      *
      * @param feature is added to the license
      * @return the previous feature of the same name but presumably different type and value or {@code null} in case
-     * there was no previous feature in the license of the same name.
+     *         there was no previous feature in the license of the same name.
      */
     public Feature add(Feature feature) {
         if (feature.name().equals(SIGNATURE_KEY) && !feature.isBinary()) {
@@ -164,19 +179,20 @@ public class License {
     }
 
     /**
-     * Converts a license to string. The string contains all the features and also the order of the
-     * features are guaranteed to be always the same.
+     * Converts a license to string. The string contains all the features and also the order of the features are
+     * guaranteed to be always the same.
      * <p>
      * Every feature is formatted as
+     * 
      * <pre>
      *     name:TYPE=value
      * </pre>
      * <p>
-     * when the value is multiline then it is converted to be multiline. Multiline strings are represented as usually
-     * in unix, with the HERE_STRING. The value in this case starts right after the {@code =} character with {@code <<}
+     * when the value is multiline then it is converted to be multiline. Multiline strings are represented as usually in
+     * unix, with the HERE_STRING. The value in this case starts right after the {@code =} character with {@code <<}
      * characters and a string to the end of the line that does not appear as a single line inside the string value.
-     * This value signals the end of the string and all other lines before it is part of the multiline string.
-     * For example:
+     * This value signals the end of the string and all other lines before it is part of the multiline string. For
+     * example:
      *
      * <pre>
      *     feature name : STRING =&lt;&lt;END
@@ -196,13 +212,13 @@ public class License {
      */
     @Override
     public String toString() {
-        final var sb = new StringBuilder();
-        Feature[] features = featuresSorted(Set.of());
+        final StringBuilder sb = new StringBuilder();
+        Feature[] features = featuresSorted(Collections.emptySet());
         for (Feature feature : features) {
-            final var valueString = feature.valueString();
-            final String value =
-                valueString.contains("\n") || valueString.startsWith("<<")
-                    ? multilineValueString(valueString) : valueString;
+            final String valueString = feature.valueString();
+            final String value = valueString.contains("\n") || valueString.startsWith("<<")
+                    ? multilineValueString(valueString)
+                    : valueString;
             sb.append(feature.toStringWith(value)).append("\n");
         }
         return sb.toString();
@@ -215,10 +231,12 @@ public class License {
      * @return the array of the features sorted.
      */
     private Feature[] featuresSorted(Set<String> excluded) {
-        return this.features.values().stream().filter(f -> !excluded.contains(f.name()))
-            .sorted(Comparator.comparing(Feature::name)).toArray(Feature[]::new);
+        return this.features.values()
+                .stream()
+                .filter(f -> !excluded.contains(f.name()))
+                .sorted(Comparator.comparing(Feature::name))
+                .toArray(Feature[]::new);
     }
-
 
     /**
      * Converts a possibly multiline string to a multiline representation of a feature value. For more information on
@@ -228,17 +246,17 @@ public class License {
      *
      * @param s the multiline string to be converted
      * @return the converted string with the leading {@code &lt;&lt;HERE_STRING} line and the terminating
-     * {@code HERE_STRING} line.
+     *         {@code HERE_STRING} line.
      */
     private String multilineValueString(String s) {
-        List<String> lines = new ArrayList<>(List.of(s.split("\n")));
-        final var sb = new StringBuilder();
-        var i = 0;
-        for (final var line : lines) {
+        List<String> lines = new ArrayList<>(Arrays.asList(s.split("\n")));
+        final StringBuilder sb = new StringBuilder();
+        int i = 0;
+        for (final String line : lines) {
             sb.append(line.length() <= i || line.charAt(i) == 'A' ? 'B' : 'A');
             i++;
         }
-        final var delimiter = sb.toString();
+        final String delimiter = sb.toString();
         String shortDelimiter = null;
         for (int j = 1; j < delimiter.length(); j++) {
             if (!lines.contains(delimiter.substring(0, j))) {
@@ -263,20 +281,20 @@ public class License {
      * @return the generated identifier.
      */
     public UUID setLicenseId() {
-        final var uuid = UUID.randomUUID();
+        final UUID uuid = UUID.randomUUID();
         setLicenseId(uuid);
         return uuid;
     }
 
     /**
      * Get the license identifier. The identifier of the license is a random UUID (128 bit random value) that can
-     * optionally be set and can be used to identify the license. This Id can be used as a reference to the license
-     * in databases, URLs. An example use it to upload a simple file to a publicly reachable server with the name
-     * of the license UUID and that it can be retrieved via a URL containing the UUID. The licensed program downloads
-     * the file (presumably zero length) and in case the response code is 200 OK then it assumes that the license is OK.
-     * If the server is not reachable or for some other reason it cannot reach the file it may assume that this is a
-     * technical glitch and go on working for a while, however if the response is a definitive 404 it means that the file
-     * was removes that means the license was revoked.
+     * optionally be set and can be used to identify the license. This Id can be used as a reference to the license in
+     * databases, URLs. An example use it to upload a simple file to a publicly reachable server with the name of the
+     * license UUID and that it can be retrieved via a URL containing the UUID. The licensed program downloads the file
+     * (presumably zero length) and in case the response code is 200 OK then it assumes that the license is OK. If the
+     * server is not reachable or for some other reason it cannot reach the file it may assume that this is a technical
+     * glitch and go on working for a while, however if the response is a definitive 404 it means that the file was
+     * removes that means the license was revoked.
      *
      * @return the UUID former identifier of the license or null in case the license does not contain an ID.
      */
@@ -291,27 +309,27 @@ public class License {
     /**
      * Get the fingerprint of a license. The fingerprint is a 128bit value calculated from the license itself using the
      * MD5 algorithm. The fingerprint is represented as a UUID. The fingerprint is never stored in the license as a
-     * feature. If the fingerprint is stored in the license as a feature then the fingerprint of the license changes
-     * so the stored fingerprint will not be the fingerprint of the license any more.
+     * feature. If the fingerprint is stored in the license as a feature then the fingerprint of the license changes so
+     * the stored fingerprint will not be the fingerprint of the license any more.
      * <p>
      * The calculation of the fingerprint ignores the signature of the license as well as the feature that stores the
      * name of the signature digest algorithm (usually "SHA-512"). This is to ensure that even if you change the
      * signature on the license using a different digest algorithm: fingerprint will not change. The fingerprint is
      * relevant to the core content of the license.
      * <p>
-     * Since the fingerprint is calculated from the binary representation of the license using the MD5 algorithm
-     * it is likely that each license will have different fingerprint. This fingerprint can be used to identify
-     * licenses similarly like the license id (see {@link #setLicenseId(UUID)},{@link #getLicenseId()}). The
-     * fingerprint can be used even when the license does not have random ID stored in the license.
+     * Since the fingerprint is calculated from the binary representation of the license using the MD5 algorithm it is
+     * likely that each license will have different fingerprint. This fingerprint can be used to identify licenses
+     * similarly like the license id (see {@link #setLicenseId(UUID)},{@link #getLicenseId()}). The fingerprint can be
+     * used even when the license does not have random ID stored in the license.
      *
      * @return the calculated fingerprint of the license
      */
     public UUID fingerprint() {
         try {
-            final var bb = ByteBuffer.wrap(MessageDigest.getInstance("MD5").digest(
-                serialized(Set.of(SIGNATURE_KEY, DIGEST_KEY))));
-            final var ms = bb.getLong();
-            final var ls = bb.getLong();
+            final ByteBuffer bb = ByteBuffer.wrap(MessageDigest.getInstance("MD5")
+                    .digest(serialized(new HashSet<>(Arrays.asList(SIGNATURE_KEY, DIGEST_KEY)))));
+            final long ms = bb.getLong();
+            final long ls = bb.getLong();
             return new UUID(ms, ls);
         } catch (final Exception e) {
             return null;
@@ -319,8 +337,8 @@ public class License {
     }
 
     /**
-     * Set the UUID of a license. Note that this UUID can be generated calling the method {@link #setLicenseId()},
-     * which method automatically calls this method setting the generated UUID to be the identifier of the license.
+     * Set the UUID of a license. Note that this UUID can be generated calling the method {@link #setLicenseId()}, which
+     * method automatically calls this method setting the generated UUID to be the identifier of the license.
      *
      * @param licenseId the uuid that was generated somewhere.
      */
@@ -336,7 +354,7 @@ public class License {
      * @return the license in binary format as a byte array
      */
     public byte[] serialized() {
-        return serialized(Set.of());
+        return serialized(Collections.emptySet());
     }
 
     /**
@@ -344,10 +362,10 @@ public class License {
      * license. Obviously, the signature itself cannot be part of the signed part of the license.
      *
      * @return the byte array containing the license without the signature. Note that the message digest algorithm used
-     * during the signature creation of the license and stored as a feature in the license is also signed.
+     *         during the signature creation of the license and stored as a feature in the license is also signed.
      */
     public byte[] unsigned() {
-        return serialized(Set.of(SIGNATURE_KEY));
+        return serialized(Collections.singleton(SIGNATURE_KEY));
     }
 
     /**
@@ -376,25 +394,25 @@ public class License {
      *
      * @param excluded set of the feature names that are not to be present in the byte array representation of the
      *                 license.
-     * @return the byte array containing the license information except the excluded features. The byte array
-     * creation is deterministic in the sense that the same license will always result the same byte array. The features
-     * converted into binary and concatenated and their order is determined by primitive sorting.
+     * @return the byte array containing the license information except the excluded features. The byte array creation
+     *         is deterministic in the sense that the same license will always result the same byte array. The features
+     *         converted into binary and concatenated and their order is determined by primitive sorting.
      */
     private byte[] serialized(Set<String> excluded) {
         Feature[] includedFeatures = featuresSorted(excluded);
-        final var featureNr = includedFeatures.length;
+        final int featureNr = includedFeatures.length;
         byte[][] featuresSerialized = new byte[featureNr][];
-        var i = 0;
-        var size = 0;
-        for (final var feature : includedFeatures) {
+        int i = 0;
+        int size = 0;
+        for (final Feature feature : includedFeatures) {
             featuresSerialized[i] = feature.serialized();
             size += featuresSerialized[i].length;
             i++;
         }
 
-        final var buffer = ByteBuffer.allocate(size + Integer.BYTES * (featureNr + 1));
+        final ByteBuffer buffer = ByteBuffer.allocate(size + Integer.BYTES * (featureNr + 1));
         buffer.putInt(MAGIC);
-        for (final var featureSerialized : featuresSerialized) {
+        for (final byte[] featureSerialized : featuresSerialized) {
             buffer.putInt(featureSerialized.length);
             buffer.put(featureSerialized);
         }
@@ -415,18 +433,18 @@ public class License {
             if (array.length < Integer.BYTES) {
                 throw new IllegalArgumentException("serialized license is too short");
             }
-            final var license = new License();
-            final var buffer = ByteBuffer.wrap(array);
-            final var magic = buffer.getInt();
+            final License license = new License();
+            final ByteBuffer buffer = ByteBuffer.wrap(array);
+            final int magic = buffer.getInt();
             if (magic != MAGIC) {
                 throw new IllegalArgumentException("serialized license is corrupt");
             }
             while (buffer.hasRemaining()) {
                 try {
-                    final var featureLength = buffer.getInt();
-                    final var featureSerialized = new byte[featureLength];
+                    final int featureLength = buffer.getInt();
+                    final byte[] featureSerialized = new byte[featureLength];
                     buffer.get(featureSerialized);
-                    final var feature = Feature.Create.from(featureSerialized);
+                    final Feature feature = Feature.Create.from(featureSerialized);
                     license.add(feature);
                 } catch (BufferUnderflowException e) {
                     throw new IllegalArgumentException(e);
@@ -436,25 +454,25 @@ public class License {
         }
 
         /**
-         * Get a license with the features from the string. The format of the string is the same as the one that
-         * was generated by the {@link License#toString()}.
+         * Get a license with the features from the string. The format of the string is the same as the one that was
+         * generated by the {@link License#toString()}.
          * <p>
-         * The syntax is more relaxed than in case of {@link License#toString()}, however. The spaces at the start
-         * of the lines, before the : and the type name and the = sign are removed. In case of multi-line string
-         * the spaces before and after the end string are removed.
+         * The syntax is more relaxed than in case of {@link License#toString()}, however. The spaces at the start of
+         * the lines, before the : and the type name and the = sign are removed. In case of multi-line string the spaces
+         * before and after the end string are removed.
          *
          * @param text the license in String format
          * @return the license
          */
         public static License from(final String text) {
-            final var license = new License();
-            try (var reader = new BufferedReader(new StringReader(text))) {
+            final License license = new License();
+            try (BufferedReader reader = new BufferedReader(new StringReader(text))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    final var parts = Feature.splitString(line);
-                    final var name = parts[0];
-                    final var typeString = parts[1];
-                    final var valueString = getValueString(reader, parts[2]);
+                    final String[] parts = Feature.splitString(line);
+                    final String name = parts[0];
+                    final String typeString = parts[1];
+                    final String valueString = getValueString(reader, parts[2]);
                     license.add(Feature.getFeature(name, typeString, valueString));
                 }
                 return license;
@@ -464,25 +482,27 @@ public class License {
         }
 
         /**
-         * Get the value string from the 'valueString' that is after the '=' character in the feature definition
-         * string and from the buffered reader that optionally supply the following lines.
+         * Get the value string from the 'valueString' that is after the '=' character in the feature definition string
+         * and from the buffered reader that optionally supply the following lines.
          * <p>
          * If the {@code valueString} does not start with the characters with {@code &lt;&lt;} the it is simply
-         * returned. If it starts with the {@code &lt;&lt;} characters then the rest of the string is
-         * interpreted as the {@code HERE_STRING} (see {@link #toString()}) and the subsequent lines are read from the
-         * buffered reader {@code reader} till the {@code HERE_STRING} is found and the lines concatenated together
-         * is returned as value string.
+         * returned. If it starts with the {@code &lt;&lt;} characters then the rest of the string is interpreted as the
+         * {@code HERE_STRING} (see {@link #toString()}) and the subsequent lines are read from the buffered reader
+         * {@code reader} till the {@code HERE_STRING} is found and the lines concatenated together is returned as value
+         * string.
          *
-         * @param reader      that supplies the consecutive lines from the text representation of the license that contains
-         *                    the feature
+         * @param reader      that supplies the consecutive lines from the text representation of the license that
+         *                    contains the feature
          * @param valueString the value string that was on the first line of the feature definition.
          * @return the valueString compiled from the current line and presumably from subsequent lines.
          * @throws IOException if the reader throws, which should never happen as we read from a String
          */
-        private static String getValueString(BufferedReader reader, String valueString) throws IOException {
+        private static String getValueString(BufferedReader reader,
+                                             String valueString)
+                throws IOException {
             if (valueString.startsWith("<<")) {
-                final var endLine = valueString.substring(2).trim();
-                final var sb = new StringBuilder();
+                final String endLine = valueString.substring(2).trim();
+                final StringBuilder sb = new StringBuilder();
                 String valueNextLine;
                 while ((valueNextLine = reader.readLine()) != null) {
                     if (valueNextLine.trim().equals(endLine)) {
