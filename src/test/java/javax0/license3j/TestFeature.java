@@ -18,7 +18,7 @@ import org.opentest4j.AssertionFailedError;
 
 import javax0.license3j.Feature.Create;
 
-public class FeatureTest {
+public class TestFeature {
 
     private static Method findMethod(final String methodName,
                                      Method[] methods,

@@ -141,11 +141,10 @@ public class Feature {
      * @return the byte array representation of the feature
      */
     public byte[] serialized() {
-        final var valueLength = type.fixedSize == VARIABLE_LENGTH ? Integer.BYTES + value.length : type.fixedSize;
         final byte[] nameBuffer = name.getBytes(StandardCharsets.UTF_8);
         final int typeLength = Integer.BYTES;
         final int nameLength = Integer.BYTES + nameBuffer.length;
-        final int valueLength = Integer.BYTES + value.length;
+        final int valueLength = type.fixedSize == VARIABLE_LENGTH ? Integer.BYTES + value.length : type.fixedSize;
         final ByteBuffer buffer = ByteBuffer.allocate(typeLength + nameLength + valueLength)
                 .putInt(type.serialized)
                 .putInt(nameBuffer.length);
@@ -488,20 +487,22 @@ public class Feature {
             final byte[] nameBuffer = new byte[nameLength];
             if (nameLength > 0) {
                 if (bb.remaining() < nameLength) {
-                    throw new IllegalArgumentException("Feature binary is too short. It is " + (valueLength + nameLength - bb.remaining()) + " bytes shy.");
+                    throw new IllegalArgumentException("Feature binary is too short. It is "
+                            + (valueLength + nameLength - bb.remaining()) + " bytes shy.");
                 }
-            bb.get(nameBuffer);
+                bb.get(nameBuffer);
             }
             final byte[] value = new byte[valueLength];
             if (valueLength > 0) {
                 if (bb.remaining() < valueLength) {
-                    throw new IllegalArgumentException("Feature binary is too short. It is " + (valueLength - bb.remaining()) + " bytes shy.");
+                    throw new IllegalArgumentException(
+                            "Feature binary is too short. It is " + (valueLength - bb.remaining()) + " bytes shy.");
                 }
                 bb.get(value);
             }
             if (bb.remaining() > 0) {
-                throw new IllegalArgumentException("Cannot load feature from a byte array that has "
-                    + serialized.length + " bytes which is " + bb.remaining() + " bytes too long");
+                throw new IllegalArgumentException("Cannot load feature from a byte array that has " + serialized.length
+                        + " bytes which is " + bb.remaining() + " bytes too long");
             }
             final String name = new String(nameBuffer, StandardCharsets.UTF_8);
             return new Feature(name, type, value);
