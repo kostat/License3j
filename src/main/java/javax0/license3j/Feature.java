@@ -129,18 +129,19 @@ public class Feature {
      * <pre>
      *      [4-byte type][4-byte name length][4-byte value length][name][value]
      * </pre>
-     *
+     * <p>
      * or
      *
      * <pre>
      *      [4-byte type][4-byte name length][name][value]
      * </pre>
-     *
+     * <p>
      * if the length of the value can be determined from the type (some types have fixed length values).
      *
      * @return the byte array representation of the feature
      */
     public byte[] serialized() {
+        final var valueLength = type.fixedSize == VARIABLE_LENGTH ? Integer.BYTES + value.length : type.fixedSize;
         final byte[] nameBuffer = name.getBytes(StandardCharsets.UTF_8);
         final int typeLength = Integer.BYTES;
         final int nameLength = Integer.BYTES + nameBuffer.length;
@@ -469,25 +470,38 @@ public class Feature {
          * @return a new feature object
          */
         public static Feature from(byte[] serialized) {
-            if (serialized.length < Integer.BYTES * 3) {
+            if (serialized.length < Integer.BYTES * 2) {
                 throw new IllegalArgumentException("Cannot load feature from a byte array that has " + serialized.length
-                        + " bytes which is < " + (3 * Integer.BYTES));
+                        + " bytes which is < " + (2 * Integer.BYTES));
             }
             ByteBuffer bb = ByteBuffer.wrap(serialized);
             int typeSerialized = bb.getInt();
             final Type type = typeFrom(typeSerialized);
             final int nameLength = bb.getInt();
+            if (nameLength < 0) {
+                throw new IllegalArgumentException("Name size is too big. 31bit length should be enough.");
+            }
             final int valueLength = type.fixedSize == VARIABLE_LENGTH ? bb.getInt() : type.fixedSize;
-            final int expectedLength = Integer.BYTES * 3 + valueLength + nameLength;
-            if (serialized.length != expectedLength) {
-                throw new IllegalArgumentException("Cannot load feature from a byte array that has " + serialized.length
-                        + " bytes which is != " + expectedLength);
+            if (valueLength < 0) {
+                throw new IllegalArgumentException("Value size is too big. 31bit length should be enough.");
             }
             final byte[] nameBuffer = new byte[nameLength];
+            if (nameLength > 0) {
+                if (bb.remaining() < nameLength) {
+                    throw new IllegalArgumentException("Feature binary is too short. It is " + (valueLength + nameLength - bb.remaining()) + " bytes shy.");
+                }
             bb.get(nameBuffer);
+            }
             final byte[] value = new byte[valueLength];
             if (valueLength > 0) {
+                if (bb.remaining() < valueLength) {
+                    throw new IllegalArgumentException("Feature binary is too short. It is " + (valueLength - bb.remaining()) + " bytes shy.");
+                }
                 bb.get(value);
+            }
+            if (bb.remaining() > 0) {
+                throw new IllegalArgumentException("Cannot load feature from a byte array that has "
+                    + serialized.length + " bytes which is " + bb.remaining() + " bytes too long");
             }
             final String name = new String(nameBuffer, StandardCharsets.UTF_8);
             return new Feature(name, type, value);
