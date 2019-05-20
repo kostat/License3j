@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
@@ -52,18 +51,20 @@ public class Feature {
         this.value = value;
     }
 
+    private static SimpleDateFormat getUTCDateFormat(String format){
+        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat(format);
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return simpleDateFormat;
+    }
+
     private static String dateFormat(Object date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT[0]);
-        dateFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
-        return dateFormat.format(date);
+        return getUTCDateFormat(DATE_FORMAT[0]).format(date);
     }
 
     private static Date dateParse(String date) {
         for (String format : DATE_FORMAT) {
             try {
-                SimpleDateFormat dateFormat = new SimpleDateFormat(format);
-                dateFormat.setTimeZone(TimeZone.getTimeZone(ZoneOffset.UTC));
-                return dateFormat.parse(date);
+                return getUTCDateFormat(format).parse(date);
             } catch (ParseException ignored) {
             }
         }
@@ -432,9 +433,9 @@ public class Feature {
             notNull(value);
             return new Feature(name, Type.UUID,
                     ByteBuffer.allocate(2 * Long.BYTES)
-                            .putLong(value.getLeastSignificantBits())
-                            .putLong(value.getMostSignificantBits())
-                            .array());
+                    .putLong(value.getLeastSignificantBits())
+                    .putLong(value.getMostSignificantBits())
+                    .array());
         }
 
         public static Feature dateFeature(String name,

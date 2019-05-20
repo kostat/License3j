@@ -45,9 +45,15 @@ class LicenseTest {
         final License restored = License.Create.from(buffer);
         Assertions.assertEquals("Peter Verhas", restored.get("owner").getString());
         Assertions.assertEquals(now, restored.get("expiry").getDate());
-        Assertions.assertEquals("expiry:DATE=2018-12-17 12:55:19.295\n" + "owner=Peter Verhas\n" + "template=<<null\n"
-                + "<<special template>>\n" + "null\n" + "title=<<B\n" + "A license test, \n" + "test license\n" + "B\n",
-                sut.toString());
+        Assertions.assertEquals("expiry:DATE=2018-12-17 12:55:19.295\n" +
+                "owner=Peter Verhas\n" +
+                "template=<<null\n" +
+                "<<special template>>\n" +
+                "null\n" +
+                "title=<<B\n" +
+                "A license test, \n" +
+                "test license\n" +
+                "B\n", sut.toString());
     }
 
     @Test
@@ -60,9 +66,15 @@ class LicenseTest {
         final License restored = License.Create.from(string);
         Assertions.assertEquals("Peter Verhas", restored.get("owner").getString());
         Assertions.assertEquals(now, restored.get("expiry").getDate());
-        Assertions.assertEquals("expiry:DATE=2018-12-17 12:55:19.295\n" + "owner=Peter Verhas\n" + "template=<<null\n"
-                + "<<special template>>\n" + "null\n" + "title=<<B\n" + "A license test, \n" + "test license\n" + "B\n",
-                sut.toString());
+        Assertions.assertEquals("expiry:DATE=2018-12-17 12:55:19.295\n" +
+                "owner=Peter Verhas\n" +
+                "template=<<null\n" +
+                "<<special template>>\n" +
+                "null\n" +
+                "title=<<B\n" +
+                "A license test, \n" +
+                "test license\n" +
+                "B\n", sut.toString());
     }
 
     @Test

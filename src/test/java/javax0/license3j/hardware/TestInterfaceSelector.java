@@ -25,14 +25,16 @@ public class TestInterfaceSelector {
         };
     }
 
-    private static IfTest test(final String ifName)
-            throws NoSuchFieldException, InstantiationException, IllegalAccessException, InvocationTargetException {
+    private static IfTest test(final String ifName) throws NoSuchFieldException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
         return new IfTest(ifName);
     }
 
     private static NetworkInterface mockInterface(final String name)
-            throws NoSuchFieldException, IllegalAccessException, InvocationTargetException, InstantiationException {
-        Constructor constructor = NetworkInterface.class.getDeclaredConstructors()[0];
+            throws NoSuchFieldException,
+            IllegalAccessException,
+            InvocationTargetException,
+            InstantiationException, NoSuchMethodException {
+        Constructor constructor = NetworkInterface.class.getDeclaredConstructor();
         constructor.setAccessible(true);
         NetworkInterface ni = (NetworkInterface) constructor.newInstance();
         Field field = NetworkInterface.class.getDeclaredField("displayName");
@@ -43,50 +45,43 @@ public class TestInterfaceSelector {
 
     @Test
     @DisplayName("If there is no regular expression defined as allowed nor as denied then everything is allowed")
-    public void testJustAnyName()
-            throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+    public void testJustAnyName() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
         test("just-any-name").isUsable();
     }
 
     @Test
     @DisplayName("If there is a regular expression allowing an interface then an interface matching the regex will be allowed")
-    public void explicitlyAllowed()
-            throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+    public void explicitlyAllowed() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
         test("allowed").allowed("allowed").isUsable();
     }
 
     @Test
     @DisplayName("If there is a regular expression allowing an interface then an interface NOT matching the regex will be denied")
-    public void explicitlyNotAllowed()
-            throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+    public void explicitlyNotAllowed() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
         test("not allowed").allowed("allowed").isDenied();
     }
 
     @Test
     @DisplayName("If there is a regular expression denying an interface then an interface matching the regex will be denied")
-    public void explicitlyDenied()
-            throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+    public void explicitlyDenied() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
         test("denied").allowed("allowed").denied("denied").isDenied();
     }
 
     @Test
     @DisplayName("If there is a regular expression denying an interface then an interface matching the regex will be denied EVEN if it matches an regex allowing it")
-    public void explicitlyDeniedEvenIfAllowed()
-            throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+    public void explicitlyDeniedEvenIfAllowed() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
         test("denied").allowed("denied").denied("denied").isDenied();
     }
 
     @Test
     @DisplayName("If there is a regular expression allowing it and the denying regex does not match then it is allowed")
-    public void explicitlyAllowedNotDenied()
-            throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+    public void explicitlyAllowedNotDenied() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
         test("allowed").allowed("allowed").denied("denied").isUsable();
     }
 
     @Test
     @DisplayName("If there is a regular expression allowing it and the denying regexes do not match then it is allowed")
-    public void explicitlyAllowedNotDeniedByAny()
-            throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+    public void explicitlyAllowedNotDeniedByAny() throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
         test("allowed").allowed("allowed").denied("denied", "denied2").isUsable();
     }
 
@@ -94,8 +89,7 @@ public class TestInterfaceSelector {
         NetworkInterface ni;
         Network.Interface.Selector sut;
 
-        IfTest(String name)
-                throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+        IfTest(String name) throws InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException, NoSuchMethodException {
             ni = mockInterface(name);
             sut = newSut();
         }
